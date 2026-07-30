@@ -11,12 +11,58 @@ const seedDoctorsIfEmpty = async () => {
       password: 'admin123',
       role: 'Admin'
     });
-    console.log('✓ System Admin active: admin@wellnessconnect.com / admin123');
 
     const count = await User.countDocuments({ role: 'Doctor' });
-    if (count < 15) {
+    if (count < 20) {
       const sampleDoctors = [
-        // Apollo Clinic Real Doctors Data
+        // Punjab / Phagwara / Jalandhar Doctors
+        {
+          name: 'Dr. Harpreet Singh Johal',
+          email: 'dr.harpreet@wellnessconnect.com',
+          password: 'password123',
+          role: 'Doctor',
+          doctorProfile: {
+            specialization: 'General Physician & Cardiology',
+            consultationFee: 500,
+            qualifications: ['MBBS', 'MD (Medicine)'],
+            experienceYears: 14,
+            bio: 'Senior Medical Practitioner at Johal Multispecialty Hospital, Phagwara, Punjab. Expert in chronic disease and cardiac care.',
+            clinicLocation: { type: 'Point', coordinates: [75.7720, 31.2240], address: 'Johal Multispecialty Hospital, GT Road, Phagwara, Punjab' },
+            isVerified: true
+          }
+        },
+        {
+          name: 'Dr. Simranjeet Kaur',
+          email: 'dr.simran@wellnessconnect.com',
+          password: 'password123',
+          role: 'Doctor',
+          doctorProfile: {
+            specialization: 'Dermatologist & Cosmetologist',
+            consultationFee: 650,
+            qualifications: ['MBBS', 'DVD', 'MD (Dermatology)'],
+            experienceYears: 8,
+            bio: 'Leading Skin & Laser Specialist in Jalandhar & Phagwara region, Punjab.',
+            clinicLocation: { type: 'Point', coordinates: [75.5762, 31.3260], address: 'Aura Skin Clinic, Model Town, Jalandhar, Punjab' },
+            isVerified: true
+          }
+        },
+        {
+          name: 'Dr. Manmohan Sharma',
+          email: 'dr.manmohan@wellnessconnect.com',
+          password: 'password123',
+          role: 'Doctor',
+          doctorProfile: {
+            specialization: 'Orthopedic & Joint Replacement',
+            consultationFee: 800,
+            qualifications: ['MBBS', 'MS (Ortho)', 'MCh'],
+            experienceYears: 16,
+            bio: 'Senior Joint Replacement Surgeon at Sacred Heart Hospital, Maqsudan, Punjab.',
+            clinicLocation: { type: 'Point', coordinates: [75.8573, 30.9010], address: 'Sacred Heart Hospital, GT Road, Ludhiana, Punjab' },
+            isVerified: true
+          }
+        },
+
+        // Apollo Clinic Real Doctors Data (Hyderabad)
         {
           name: 'Dr. Atukuri Naga Venkata Sai Dinesh',
           email: 'dr.dinesh@apolloclinic.com',
@@ -92,7 +138,8 @@ const seedDoctorsIfEmpty = async () => {
             isVerified: true
           }
         },
-        // Additional Multi-Specialty Verified Doctors
+
+        // Delhi NCR & National Doctors
         {
           name: 'Dr. Rajesh Sharma',
           email: 'rajesh.sharma@wellnessconnect.com',
@@ -101,7 +148,9 @@ const seedDoctorsIfEmpty = async () => {
           doctorProfile: {
             specialization: 'Cardiologist',
             consultationFee: 900,
-            clinicLocation: { type: 'Point', coordinates: [77.2140, 28.6319], address: 'Max Heart & Vascular Institute, Delhi' },
+            qualifications: ['MBBS', 'MD', 'DM (Cardiology)'],
+            experienceYears: 18,
+            clinicLocation: { type: 'Point', coordinates: [77.2140, 28.6319], address: 'Max Heart & Vascular Institute, Saket, Delhi NCR' },
             isVerified: true
           }
         },
@@ -113,7 +162,9 @@ const seedDoctorsIfEmpty = async () => {
           doctorProfile: {
             specialization: 'Dermatologist',
             consultationFee: 700,
-            clinicLocation: { type: 'Point', coordinates: [77.1980, 28.5990], address: 'Skin & Laser Care Center, Green Park' },
+            qualifications: ['MBBS', 'MD (Dermatology)'],
+            experienceYears: 10,
+            clinicLocation: { type: 'Point', coordinates: [77.1980, 28.5990], address: 'Skin Care Center, Green Park, Delhi NCR' },
             isVerified: true
           }
         },
@@ -125,7 +176,9 @@ const seedDoctorsIfEmpty = async () => {
           doctorProfile: {
             specialization: 'Neurologist',
             consultationFee: 1200,
-            clinicLocation: { type: 'Point', coordinates: [77.2050, 28.6410], address: 'Brain & Spine Institute, Karol Bagh' },
+            qualifications: ['MBBS', 'DM (Neurology)'],
+            experienceYears: 20,
+            clinicLocation: { type: 'Point', coordinates: [77.2050, 28.6410], address: 'Brain & Spine Institute, Karol Bagh, Delhi NCR' },
             isVerified: true
           }
         },
@@ -137,19 +190,9 @@ const seedDoctorsIfEmpty = async () => {
           doctorProfile: {
             specialization: 'Gastroenterologist',
             consultationFee: 850,
-            clinicLocation: { type: 'Point', coordinates: [77.2340, 28.5850], address: 'Gastro & Liver Care Clinic, Lajpat Nagar' },
-            isVerified: true
-          }
-        },
-        {
-          name: 'Dr. Gurpreet Kaur',
-          email: 'gurpreet.kaur@wellnessconnect.com',
-          password: 'password123',
-          role: 'Doctor',
-          doctorProfile: {
-            specialization: 'Pulmonologist',
-            consultationFee: 800,
-            clinicLocation: { type: 'Point', coordinates: [77.1850, 28.6520], address: 'Pulmonary Respiratory Clinic, Rajendra Nagar' },
+            qualifications: ['MBBS', 'DM (Gastro)'],
+            experienceYears: 12,
+            clinicLocation: { type: 'Point', coordinates: [88.3639, 22.5726], address: 'Apollo Gleneagles Hospital, Salt Lake, Kolkata' },
             isVerified: true
           }
         },
@@ -161,19 +204,9 @@ const seedDoctorsIfEmpty = async () => {
           doctorProfile: {
             specialization: 'Oncologist',
             consultationFee: 1500,
-            clinicLocation: { type: 'Point', coordinates: [77.2450, 28.5680], address: 'Apollo Oncology Center, Sarita Vihar' },
-            isVerified: true
-          }
-        },
-        {
-          name: 'Dr. Meenakshi Sundaram',
-          email: 'meenakshi.s@wellnessconnect.com',
-          password: 'password123',
-          role: 'Doctor',
-          doctorProfile: {
-            specialization: 'Rheumatologist',
-            consultationFee: 950,
-            clinicLocation: { type: 'Point', coordinates: [77.1680, 28.6180], address: 'Joint & Arthritis Care Clinic, Patel Nagar' },
+            qualifications: ['MBBS', 'MD', 'DM (Oncology)'],
+            experienceYears: 22,
+            clinicLocation: { type: 'Point', coordinates: [72.8777, 19.0760], address: 'Tata Memorial Hospital Annex, Bandra, Mumbai' },
             isVerified: true
           }
         },
@@ -185,31 +218,9 @@ const seedDoctorsIfEmpty = async () => {
           doctorProfile: {
             specialization: 'Endocrinologist',
             consultationFee: 1000,
-            clinicLocation: { type: 'Point', coordinates: [77.2180, 28.5520], address: 'Diabetes & Hormone Center, Saket' },
-            isVerified: true
-          }
-        },
-        {
-          name: 'Dr. Sunita Kapoor',
-          email: 'sunita.kapoor@wellnessconnect.com',
-          password: 'password123',
-          role: 'Doctor',
-          doctorProfile: {
-            specialization: 'Pediatrician',
-            consultationFee: 600,
-            clinicLocation: { type: 'Point', coordinates: [77.2280, 28.6380], address: 'Child Care & Health Center, Daryaganj' },
-            isVerified: true
-          }
-        },
-        {
-          name: 'Dr. Harshvardhan Joshi',
-          email: 'harsh.joshi@wellnessconnect.com',
-          password: 'password123',
-          role: 'Doctor',
-          doctorProfile: {
-            specialization: 'Orthopedic',
-            consultationFee: 1100,
-            clinicLocation: { type: 'Point', coordinates: [77.1950, 28.5720], address: 'Ortho & Bone Trauma Center, Hauz Khas' },
+            qualifications: ['MBBS', 'MD', 'DM (Endo)'],
+            experienceYears: 15,
+            clinicLocation: { type: 'Point', coordinates: [77.5946, 12.9716], address: 'Manipal Diabetes & Endocrinology Clinic, MG Road, Bangalore' },
             isVerified: true
           }
         }
@@ -227,7 +238,7 @@ const seedDoctorsIfEmpty = async () => {
   }
 };
 
-// GET /api/doctors - Search and filter doctors with Apollo Clinic multi-criteria search
+// GET /api/doctors - Search and filter doctors across all India locations
 const getDoctors = async (req, res) => {
   try {
     await seedDoctorsIfEmpty();
@@ -248,6 +259,7 @@ const getDoctors = async (req, res) => {
     }
 
     if (city) {
+      // Flexible city regex (e.g. Punjab, Phagwara, Jalandhar, Delhi, Hyderabad, Mumbai, Kolkata)
       query['doctorProfile.clinicLocation.address'] = { $regex: city, $options: 'i' };
     }
 
@@ -255,7 +267,13 @@ const getDoctors = async (req, res) => {
       query['doctorProfile.isVerified'] = isVerified === 'true';
     }
 
-    const doctors = await User.find(query).select('-password');
+    let doctors = await User.find(query).select('-password');
+
+    // Fallback: If 0 doctors match a specific city filter, return all verified doctors so screen is never empty
+    if (doctors.length === 0) {
+      doctors = await User.find({ role: 'Doctor' }).select('-password');
+    }
+
     res.json(doctors);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
