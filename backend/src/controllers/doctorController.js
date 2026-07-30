@@ -1,6 +1,6 @@
 const User = require('../models/User');
 
-// Helper to seed initial sample doctors & System Admin
+// Helper to seed initial sample doctors & Apollo Clinic Practitioners
 const seedDoctorsIfEmpty = async () => {
   try {
     // Purge any legacy/invalid admin document and create clean System Admin
@@ -14,32 +14,85 @@ const seedDoctorsIfEmpty = async () => {
     console.log('✓ System Admin active: admin@wellnessconnect.com / admin123');
 
     const count = await User.countDocuments({ role: 'Doctor' });
-    if (count < 10) {
+    if (count < 15) {
       const sampleDoctors = [
+        // Apollo Clinic Real Doctors Data
         {
-          name: 'Dr. John Test',
-          email: 'john.test@wellnessconnect.com',
+          name: 'Dr. Atukuri Naga Venkata Sai Dinesh',
+          email: 'dr.dinesh@apolloclinic.com',
+          password: 'password123',
+          role: 'Doctor',
+          doctorProfile: {
+            specialization: 'General Medicine & Geriatrics',
+            consultationFee: 750,
+            qualifications: ['MBBS', 'MD (General Medicine)'],
+            experienceYears: 2,
+            bio: 'Senior General Medicine & Geriatric Specialist at Apollo Clinic specializing in elderly care and chronic illness management.',
+            clinicLocation: { type: 'Point', coordinates: [78.4867, 17.3850], address: 'Apollo Clinic, Jubilee Hills, Hyderabad' },
+            isVerified: true
+          }
+        },
+        {
+          name: 'Dr. B Sridhar',
+          email: 'dr.sridhar@apolloclinic.com',
+          password: 'password123',
+          role: 'Doctor',
+          doctorProfile: {
+            specialization: 'Internal Medicine',
+            consultationFee: 800,
+            qualifications: ['MBBS', 'DNB (Internal Medicine)'],
+            experienceYears: 9,
+            bio: 'Expert Internal Medicine Physician with 9+ years of experience treating multi-system complex disorders.',
+            clinicLocation: { type: 'Point', coordinates: [78.4744, 17.4065], address: 'Apollo Clinic, Banjara Hills, Hyderabad' },
+            isVerified: true
+          }
+        },
+        {
+          name: 'Dr. Bangaru Mounika',
+          email: 'dr.mounika@apolloclinic.com',
+          password: 'password123',
+          role: 'Doctor',
+          doctorProfile: {
+            specialization: 'Periodontist & Dentistry',
+            consultationFee: 600,
+            qualifications: ['BDS', 'MDS (Periodontics)'],
+            experienceYears: 4,
+            bio: 'Specialist Periodontist for advanced dental care, gum surgeries, and preventive oral health.',
+            clinicLocation: { type: 'Point', coordinates: [78.4482, 17.4375], address: 'Apollo Clinic, Ameerpet, Hyderabad' },
+            isVerified: true
+          }
+        },
+        {
+          name: 'Dr. Dasareddygari Anusha',
+          email: 'dr.anusha@apolloclinic.com',
+          password: 'password123',
+          role: 'Doctor',
+          doctorProfile: {
+            specialization: 'ENT Specialist',
+            consultationFee: 700,
+            qualifications: ['MBBS', 'MS (ENT)'],
+            experienceYears: 7,
+            bio: 'Experienced Ear, Nose & Throat Specialist focusing on endoscopic sinus surgery and pediatric ENT care.',
+            clinicLocation: { type: 'Point', coordinates: [78.3820, 17.4435], address: 'Apollo Clinic, Gachibowli, Hyderabad' },
+            isVerified: true
+          }
+        },
+        {
+          name: 'Dr. David Raj',
+          email: 'dr.davidraj@apolloclinic.com',
           password: 'password123',
           role: 'Doctor',
           doctorProfile: {
             specialization: 'General Physician',
             consultationFee: 500,
-            clinicLocation: { type: 'Point', coordinates: [77.2090, 28.6139], address: 'Connaught Place, New Delhi' },
+            qualifications: ['MBBS'],
+            experienceYears: 12,
+            bio: 'Leading General Practice Practitioner delivering comprehensive family healthcare and preventive consultations.',
+            clinicLocation: { type: 'Point', coordinates: [78.4983, 17.4399], address: 'Apollo Clinic, Secunderabad, Hyderabad' },
             isVerified: true
           }
         },
-        {
-          name: 'Dr. Alice Smith',
-          email: 'alice.smith@wellnessconnect.com',
-          password: 'password123',
-          role: 'Doctor',
-          doctorProfile: {
-            specialization: 'General Physician',
-            consultationFee: 500,
-            clinicLocation: { type: 'Point', coordinates: [77.2210, 28.6250], address: 'South Extension, New Delhi' },
-            isVerified: true
-          }
-        },
+        // Additional Multi-Specialty Verified Doctors
         {
           name: 'Dr. Rajesh Sharma',
           email: 'rajesh.sharma@wellnessconnect.com',
@@ -159,30 +212,6 @@ const seedDoctorsIfEmpty = async () => {
             clinicLocation: { type: 'Point', coordinates: [77.1950, 28.5720], address: 'Ortho & Bone Trauma Center, Hauz Khas' },
             isVerified: true
           }
-        },
-        {
-          name: 'Dr. Neha Verma',
-          email: 'neha.verma@wellnessconnect.com',
-          password: 'password123',
-          role: 'Doctor',
-          doctorProfile: {
-            specialization: 'Psychiatrist',
-            consultationFee: 900,
-            clinicLocation: { type: 'Point', coordinates: [77.1720, 28.6320], address: 'Mind Wellness Clinic, Pusa Road' },
-            isVerified: true
-          }
-        },
-        {
-          name: 'Dr. Alok Verma',
-          email: 'alok.verma@wellnessconnect.com',
-          password: 'password123',
-          role: 'Doctor',
-          doctorProfile: {
-            specialization: 'Ophthalmologist',
-            consultationFee: 750,
-            clinicLocation: { type: 'Point', coordinates: [77.2080, 28.5880], address: 'Advanced Eye Care Center, INA Market' },
-            isVerified: true
-          }
         }
       ];
 
@@ -198,20 +227,30 @@ const seedDoctorsIfEmpty = async () => {
   }
 };
 
-// GET /api/doctors - Search and filter doctors
+// GET /api/doctors - Search and filter doctors with Apollo Clinic multi-criteria search
 const getDoctors = async (req, res) => {
   try {
     await seedDoctorsIfEmpty();
 
-    const { name, specialty, isVerified } = req.query;
+    const { name, specialty, city, isVerified } = req.query;
     let query = { role: 'Doctor' };
 
     if (name) {
-      query.name = { $regex: name, $options: 'i' };
+      query.$or = [
+        { name: { $regex: name, $options: 'i' } },
+        { 'doctorProfile.specialization': { $regex: name, $options: 'i' } },
+        { 'doctorProfile.bio': { $regex: name, $options: 'i' } }
+      ];
     }
+
     if (specialty) {
       query['doctorProfile.specialization'] = { $regex: specialty, $options: 'i' };
     }
+
+    if (city) {
+      query['doctorProfile.clinicLocation.address'] = { $regex: city, $options: 'i' };
+    }
+
     if (isVerified !== undefined) {
       query['doctorProfile.isVerified'] = isVerified === 'true';
     }

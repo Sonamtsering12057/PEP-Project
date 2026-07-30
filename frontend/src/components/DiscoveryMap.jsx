@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import axios from 'axios';
 
@@ -19,6 +19,8 @@ const getHaversineDistance = (lat1, lon1, lat2, lon2) => {
 const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
   const [doctors, setDoctors] = useState([]);
   const [selectedSpecialty, setSelectedSpecialty] = useState(recommendedSpecialty || '');
+  const [selectedCity, setSelectedCity] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [trackingRoute, setTrackingRoute] = useState(null);
@@ -35,15 +37,18 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
     }
   }, [recommendedSpecialty]);
 
-  // Fetch doctors from backend API
+  // Fetch doctors from backend API with Apollo Clinic search parameters
   useEffect(() => {
     const fetchDoctors = async () => {
       setLoading(true);
       try {
-        let url = 'http://localhost:5001/api/doctors';
-        if (selectedSpecialty) {
-          url += `?specialty=${encodeURIComponent(selectedSpecialty)}`;
-        }
+        let url = 'http://localhost:5001/api/doctors?';
+        const params = [];
+        if (selectedSpecialty) params.push(`specialty=${encodeURIComponent(selectedSpecialty)}`);
+        if (selectedCity) params.push(`city=${encodeURIComponent(selectedCity)}`);
+        if (searchKeyword) params.push(`name=${encodeURIComponent(searchKeyword)}`);
+        
+        url += params.join('&');
         const res = await axios.get(url);
 
         const fetchedDocs = res.data || [];
@@ -63,10 +68,11 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
             lat,
             lng,
             specialization: doc.doctorProfile?.specialization || 'General Physician',
+            qualifications: doc.doctorProfile?.qualifications?.join(', ') || 'MBBS, MD',
             fee: doc.doctorProfile?.consultationFee || 500,
             address: doc.doctorProfile?.clinicLocation?.address || 'Medical Health Clinic Center',
             rating: (4.3 + (idx % 7) * 0.1).toFixed(1),
-            experience: `${6 + (idx % 8)} years`,
+            experience: `${doc.doctorProfile?.experienceYears || (6 + (idx % 8))} yrs exp`,
             distanceKm,
             estDriveTime,
             distanceText: `${distanceKm} km away`
@@ -82,7 +88,7 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
     };
 
     fetchDoctors();
-  }, [selectedSpecialty, userLocation]);
+  }, [selectedSpecialty, selectedCity, searchKeyword, userLocation]);
 
   // Initialize MapLibre 3D Vector Engine
   useEffect(() => {
@@ -102,16 +108,15 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
         antialias: true
       });
 
-      // Add 3D Navigation Controls (Compass, Pitch, Zoom)
+      // Add 3D Navigation Controls
       map.addControl(new maplibregl.NavigationControl({
         visualizePitch: true,
         showCompass: true,
         showZoom: true
       }), 'top-right');
 
-      // Add 3D Extruded Buildings Layer when map style loads
+      // Add 3D Extruded Buildings Layer
       map.on('style.load', () => {
-        // Insert 3D building layer before label layer if available
         const layers = map.getStyle().layers;
         let labelLayerId;
         for (let i = 0; i < layers.length; i++) {
@@ -150,7 +155,7 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
 
-    // Add Patient 3D Location Marker (Red Pulsing Pin)
+    // Add Patient 3D Location Marker
     const patientLng = userLocation?.lng || centerLng;
     const patientLat = userLocation?.lat || centerLat;
 
@@ -177,7 +182,7 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
 
     markersRef.current.push(pMarker);
 
-    // Add Doctor 3D Markers (Blue Pins)
+    // Add Doctor 3D Markers
     doctors.forEach((doc) => {
       const isSelected = selectedDoctor?._id === doc._id;
 
@@ -205,12 +210,13 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
       `;
 
       const docPopup = new maplibregl.Popup({ offset: 25 }).setHTML(`
-        <div style="font-family: sans-serif; padding: 8px; min-width: 190px;">
+        <div style="font-family: sans-serif; padding: 8px; min-width: 200px;">
           <strong style="font-size: 14px; color: #0f172a;">${doc.name}</strong>
+          <p style="margin: 2px 0; font-size: 11px; color: #64748b;">🎓 ${doc.qualifications}</p>
           <p style="margin: 2px 0; font-size: 12px; color: #2563eb; font-weight: 600;">${doc.specialization}</p>
-          <p style="margin: 2px 0; font-size: 11px; color: #475569;">⭐ ${doc.rating} · 📍 ${doc.distanceText}</p>
-          <p style="margin: 4px 0 8px 0; font-size: 12px; font-weight: 700; color: #047857;">Fee: ₹${doc.fee}</p>
-          <button id="book-3d-btn-${doc._id}" style="width: 100%; background: #2563eb; color: white; border: none; padding: 7px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer;">
+          <p style="margin: 2px 0; font-size: 11px; color: #475569;">⭐ ${doc.rating} · ⏳ ${doc.experience} · 📍 ${doc.distanceText}</p>
+          <p style="margin: 4px 0 8px 0; font-size: 12px; font-weight: 700; color: #047857;">Consultation Fee: ₹${doc.fee}</p>
+          <button id="book-apollo-btn-${doc._id}" style="width: 100%; background: #2563eb; color: white; border: none; padding: 7px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer;">
             Book Appointment
           </button>
         </div>
@@ -227,7 +233,7 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
       });
 
       docPopup.on('open', () => {
-        const btn = document.getElementById(`book-3d-btn-${doc._id}`);
+        const btn = document.getElementById(`book-apollo-btn-${doc._id}`);
         if (btn) {
           btn.onclick = () => {
             if (onBookDoctor) onBookDoctor(doc);
@@ -248,7 +254,6 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
     const patientLat = userLocation?.lat || 28.6139;
     const patientLng = userLocation?.lng || 77.2090;
 
-    // Remove existing route layer & source
     if (map.getLayer('route-line')) map.removeLayer('route-line');
     if (map.getLayer('route-line-glow')) map.removeLayer('route-line-glow');
     if (map.getSource('route')) map.removeSource('route');
@@ -270,7 +275,6 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
       data: routeGeoJSON
     });
 
-    // Add glowing background route layer
     map.addLayer({
       id: 'route-line-glow',
       type: 'line',
@@ -283,7 +287,6 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
       }
     });
 
-    // Add high-contrast main route line layer
     map.addLayer({
       id: 'route-line',
       type: 'line',
@@ -296,7 +299,6 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
       }
     });
 
-    // Smooth 3D Camera FlyTo Bounds
     const bounds = new maplibregl.LngLatBounds()
       .extend([patientLng, patientLat])
       .extend([doc.lng, doc.lat]);
@@ -321,7 +323,6 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
     });
   };
 
-  // Toggle between 3D Perspective and 2D Flat Mode
   const toggle3DView = () => {
     if (!mapInstanceRef.current) return;
     const map = mapInstanceRef.current;
@@ -338,6 +339,8 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
   const specialtiesList = [
     'All Specialties',
     'General Physician',
+    'General Medicine & Geriatrics',
+    'Internal Medicine',
     'Cardiologist',
     'Dermatologist',
     'Neurologist',
@@ -349,15 +352,59 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
     'Pediatrician',
     'Orthopedic',
     'Psychiatrist',
-    'Ophthalmologist'
+    'ENT Specialist',
+    'Periodontist & Dentistry'
+  ];
+
+  const cityList = [
+    'All Cities',
+    'Hyderabad',
+    'Delhi NCR',
+    'Punjab',
+    'Kolkata'
   ];
 
   return (
     <div className="space-y-6">
 
-      {/* Specialty Filter Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-[#111827] p-4 rounded-2xl border border-white/8">
-        <div className="flex items-center gap-2 overflow-x-auto py-1 max-w-full no-scrollbar">
+      {/* Apollo Clinic Multi-Criteria Search & Filter Header */}
+      <div className="bg-[#111827] p-5 rounded-2xl border border-white/8 space-y-4">
+        
+        {/* Search Bar + City Selector */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="md:col-span-2 relative">
+            <input
+              type="text"
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              placeholder="🔍 Search Doctor by Name, Specialty, or Symptoms..."
+              className="w-full bg-[#0d1117] border border-white/10 text-white placeholder-gray-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            />
+            {searchKeyword && (
+              <button
+                onClick={() => setSearchKeyword('')}
+                className="absolute right-3 top-2.5 text-xs text-gray-400 hover:text-white"
+              >
+                ✕ Clear
+              </button>
+            )}
+          </div>
+
+          <div>
+            <select
+              value={selectedCity}
+              onChange={(e) => setSelectedCity(e.target.value === 'All Cities' ? '' : e.target.value)}
+              className="w-full bg-[#0d1117] border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            >
+              {cityList.map(city => (
+                <option key={city} value={city === 'All Cities' ? '' : city}>{city === 'All Cities' ? '📍 Select City (All Cities)' : `📍 ${city}`}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Specialty Filter Buttons */}
+        <div className="flex items-center gap-2 overflow-x-auto py-1 max-w-full no-scrollbar pt-1 border-t border-white/5">
           <span className="text-xs font-semibold text-gray-400 whitespace-nowrap mr-1">Specialty Filter:</span>
           {specialtiesList.map((sp) => {
             const isSelected = (sp === 'All Specialties' && !selectedSpecialty) || selectedSpecialty === sp;
@@ -380,22 +427,13 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
             );
           })}
         </div>
-
-        {selectedSpecialty && (
-          <button
-            onClick={() => { setSelectedSpecialty(''); setSelectedDoctor(null); setTrackingRoute(null); }}
-            className="text-xs text-blue-400 hover:text-blue-300 font-medium underline whitespace-nowrap"
-          >
-            Clear Filter
-          </button>
-        )}
       </div>
 
-      {/* Main Grid: 3D Map + Doctor Cards Sidebar */}
+      {/* Main Grid: 3D Map + Apollo Style Doctor Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* 3D Map Component Container */}
-        <div className="lg:col-span-2 bg-[#111827] border border-white/8 rounded-2xl overflow-hidden h-[560px] relative shadow-2xl z-0 flex flex-col">
+        {/* 3D Map Container */}
+        <div className="lg:col-span-2 bg-[#111827] border border-white/8 rounded-2xl overflow-hidden h-[580px] relative shadow-2xl z-0 flex flex-col">
 
           {/* 3D Mode Toggle Button */}
           <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-[#0d1117]/90 backdrop-blur-md border border-white/10 p-1.5 rounded-xl shadow-xl">
@@ -409,7 +447,7 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
             </button>
           </div>
 
-          {/* Live Navigation Tracking Overlay Banner */}
+          {/* Live Route Banner */}
           {trackingRoute && (
             <div className="absolute top-16 left-4 right-14 z-10 bg-[#0d1117]/95 backdrop-blur-md border border-blue-500/30 p-3.5 rounded-xl shadow-2xl flex items-center justify-between gap-3 animate-fadeIn">
               <div>
@@ -446,14 +484,14 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
         </div>
 
         {/* Doctor Cards Sidebar */}
-        <div className="bg-[#111827] border border-white/8 rounded-2xl p-5 flex flex-col h-[560px]">
+        <div className="bg-[#111827] border border-white/8 rounded-2xl p-5 flex flex-col h-[580px]">
           <div className="flex items-center justify-between mb-4 flex-shrink-0">
             <div>
-              <h3 className="text-white font-bold text-lg">Nearby Specialists</h3>
-              <p className="text-gray-400 text-xs mt-0.5">{selectedSpecialty ? `${selectedSpecialty} Doctors` : 'All Medical Specialties'}</p>
+              <h3 className="text-white font-bold text-lg">Verified Practitioners</h3>
+              <p className="text-gray-400 text-xs mt-0.5">Apollo Clinic & Specialist Network</p>
             </div>
             <span className="text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full font-medium">
-              {doctors.length} Verified
+              {doctors.length} Available
             </span>
           </div>
 
@@ -466,7 +504,7 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
               {doctors.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-5xl mb-3">🩺</div>
-                  <p className="text-gray-400 text-sm">No doctors available for this specialty.</p>
+                  <p className="text-gray-400 text-sm">No doctors match your search query.</p>
                 </div>
               ) : (
                 doctors.map((doc) => {
@@ -484,20 +522,22 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
                           : 'bg-white/3 border-white/5 hover:border-white/15'
                       }`}
                     >
-                      <div className="flex justify-between items-start mb-2">
+                      <div className="flex justify-between items-start mb-1.5">
                         <div>
-                          <h4 className="text-white font-semibold text-sm">{doc.name}</h4>
-                          <p className="text-blue-400 text-xs font-medium">{doc.specialization}</p>
-                          <p className="text-gray-400 text-[11px] mt-0.5 truncate max-w-[180px]">📍 {doc.address}</p>
+                          <h4 className="text-white font-bold text-sm">{doc.name}</h4>
+                          <p className="text-blue-400 text-xs font-semibold">{doc.specialization}</p>
+                          <p className="text-gray-400 text-[11px] mt-0.5">🎓 {doc.qualifications}</p>
                         </div>
                         <span className="text-xs font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-md flex-shrink-0">
                           ⭐ {doc.rating}
                         </span>
                       </div>
 
+                      <p className="text-gray-400 text-[11px] truncate mt-1">📍 {doc.address}</p>
+
                       <div className="flex items-center justify-between text-xs text-gray-400 mt-2.5 pt-2 border-t border-white/5">
-                        <span>🚘 {doc.distanceText} (~{doc.estDriveTime}m)</span>
-                        <span className="text-white font-medium">₹{doc.fee} / consult</span>
+                        <span>⏳ {doc.experience} · 🚘 {doc.distanceText}</span>
+                        <span className="text-emerald-400 font-bold">₹{doc.fee} / consult</span>
                       </div>
 
                       <div className="mt-3 grid grid-cols-2 gap-2">
