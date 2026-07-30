@@ -1,45 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import axios from 'axios';
-
-// Fix Leaflet default icon paths in Vite
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-
-// Custom Doctor Marker Pin (Blue)
-const doctorIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
-
-// Custom Selected Doctor Marker Pin (Green)
-const activeDoctorIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [30, 48],
-  iconAnchor: [15, 48],
-  popupAnchor: [1, -34],
-  shadowSize: [45, 45]
-});
-
-// Custom Patient Location Icon (Red Pin)
-const userIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
 
 // Haversine Distance Calculation Helper (km)
 const getHaversineDistance = (lat1, lon1, lat2, lon2) => {
@@ -60,11 +22,11 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
   const [loading, setLoading] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [trackingRoute, setTrackingRoute] = useState(null);
+  const [is3DMode, setIs3DMode] = useState(true);
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef([]);
-  const polylineRef = useRef(null);
 
   // Sync recommendedSpecialty prop
   useEffect(() => {
@@ -73,7 +35,7 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
     }
   }, [recommendedSpecialty]);
 
-  // Fetch doctors from backend
+  // Fetch doctors from backend API
   useEffect(() => {
     const fetchDoctors = async () => {
       setLoading(true);
@@ -89,9 +51,9 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
         const baseLng = userLocation?.lng || 77.2090;
 
         const enriched = fetchedDocs.map((doc, idx) => {
-          const lat = doc.doctorProfile?.clinicLocation?.coordinates?.[1] || (baseLat + (idx * 0.015 - 0.010));
-          const lng = doc.doctorProfile?.clinicLocation?.coordinates?.[0] || (baseLng + (idx * 0.015 - 0.010));
-          
+          const lat = doc.doctorProfile?.clinicLocation?.coordinates?.[1] || (baseLat + (idx * 0.012 - 0.008));
+          const lng = doc.doctorProfile?.clinicLocation?.coordinates?.[0] || (baseLng + (idx * 0.012 - 0.008));
+
           const rawDist = getHaversineDistance(baseLat, baseLng, lat, lng);
           const distanceKm = rawDist.toFixed(1);
           const estDriveTime = Math.max(3, Math.round(rawDist * 3));
@@ -122,7 +84,7 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
     fetchDoctors();
   }, [selectedSpecialty, userLocation]);
 
-  // Initialize and update Leaflet Map
+  // Initialize MapLibre 3D Vector Engine
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
@@ -130,11 +92,54 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
     const centerLng = userLocation?.lng || 77.2090;
 
     if (!mapInstanceRef.current) {
-      const map = L.map(mapContainerRef.current).setView([centerLat, centerLng], 13);
+      const map = new maplibregl.Map({
+        container: mapContainerRef.current,
+        style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        center: [centerLng, centerLat],
+        zoom: 13.5,
+        pitch: is3DMode ? 60 : 0,
+        bearing: is3DMode ? -17.6 : 0,
+        antialias: true
+      });
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(map);
+      // Add 3D Navigation Controls (Compass, Pitch, Zoom)
+      map.addControl(new maplibregl.NavigationControl({
+        visualizePitch: true,
+        showCompass: true,
+        showZoom: true
+      }), 'top-right');
+
+      // Add 3D Extruded Buildings Layer when map style loads
+      map.on('style.load', () => {
+        // Insert 3D building layer before label layer if available
+        const layers = map.getStyle().layers;
+        let labelLayerId;
+        for (let i = 0; i < layers.length; i++) {
+          if (layers[i].type === 'symbol' && layers[i].layout && layers[i].layout['text-field']) {
+            labelLayerId = layers[i].id;
+            break;
+          }
+        }
+
+        if (!map.getLayer('3d-buildings')) {
+          map.addLayer(
+            {
+              id: '3d-buildings',
+              source: 'carto',
+              'source-layer': 'building',
+              type: 'fill-extrusion',
+              minzoom: 13,
+              paint: {
+                'fill-extrusion-color': '#1f2937',
+                'fill-extrusion-height': ['get', 'render_height'],
+                'fill-extrusion-base': ['get', 'render_min_height'],
+                'fill-extrusion-opacity': 0.75
+              }
+            },
+            labelLayerId
+          );
+        }
+      });
 
       mapInstanceRef.current = map;
     }
@@ -142,48 +147,87 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
     const map = mapInstanceRef.current;
 
     // Clear existing markers
-    markersRef.current.forEach(m => map.removeLayer(m));
+    markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
 
-    // Clear existing polyline
-    if (polylineRef.current) {
-      map.removeLayer(polylineRef.current);
-      polylineRef.current = null;
-    }
+    // Add Patient 3D Location Marker (Red Pulsing Pin)
+    const patientLng = userLocation?.lng || centerLng;
+    const patientLat = userLocation?.lat || centerLat;
 
-    // Add Patient Marker
-    const userMarkerLat = userLocation?.lat || centerLat;
-    const userMarkerLng = userLocation?.lng || centerLng;
+    const patientEl = document.createElement('div');
+    patientEl.className = 'patient-3d-marker';
+    patientEl.innerHTML = `
+      <div style="position: relative; cursor: pointer;">
+        <div style="width: 24px; height: 24px; background: #ef4444; border: 3px solid #ffffff; border-radius: 50%; box-shadow: 0 0 15px rgba(239, 68, 68, 0.8);"></div>
+        <div style="position: absolute; top: -4px; left: -4px; width: 32px; height: 32px; background: rgba(239, 68, 68, 0.3); border-radius: 50%; animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+      </div>
+    `;
 
-    const userMarker = L.marker([userMarkerLat, userMarkerLng], { icon: userIcon })
-      .addTo(map)
-      .bindPopup(`
-        <div style="font-family: sans-serif; padding: 4px;">
-          <strong style="color: #ef4444; font-size: 13px;">📍 Your Current Location</strong>
-          <p style="margin: 2px 0 0 0; font-size: 11px; color: #64748b;">Searching available doctors near you...</p>
-        </div>
-      `);
-    markersRef.current.push(userMarker);
+    const patientPopup = new maplibregl.Popup({ offset: 25 }).setHTML(`
+      <div style="font-family: sans-serif; padding: 6px;">
+        <strong style="color: #ef4444; font-size: 13px;">📍 Your 3D Live Location</strong>
+        <p style="margin: 3px 0 0 0; font-size: 11px; color: #64748b;">Searching nearby specialists...</p>
+      </div>
+    `);
 
-    // Add Doctor Markers
+    const pMarker = new maplibregl.Marker({ element: patientEl })
+      .setLngLat([patientLng, patientLat])
+      .setPopup(patientPopup)
+      .addTo(map);
+
+    markersRef.current.push(pMarker);
+
+    // Add Doctor 3D Markers (Blue Pins)
     doctors.forEach((doc) => {
       const isSelected = selectedDoctor?._id === doc._id;
-      const marker = L.marker([doc.lat, doc.lng], { icon: isSelected ? activeDoctorIcon : doctorIcon })
-        .addTo(map)
-        .bindPopup(`
-          <div style="font-family: sans-serif; padding: 6px; min-width: 190px;">
-            <strong style="font-size: 14px; color: #0f172a;">${doc.name}</strong>
-            <p style="margin: 2px 0; font-size: 12px; color: #2563eb; font-weight: 600;">${doc.specialization}</p>
-            <p style="margin: 2px 0; font-size: 11px; color: #475569;">⭐ ${doc.rating} · 📍 ${doc.distanceText} (~${doc.estDriveTime} mins drive)</p>
-            <p style="margin: 4px 0 8px 0; font-size: 12px; font-weight: 700; color: #047857;">Consultation Fee: ₹${doc.fee}</p>
-            <button id="book-btn-${doc._id}" style="width: 100%; background: #2563eb; color: white; border: none; padding: 7px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; margin-bottom: 4px;">
-              Book Appointment
-            </button>
-          </div>
-        `);
 
-      marker.on('popupopen', () => {
-        const btn = document.getElementById(`book-btn-${doc._id}`);
+      const docEl = document.createElement('div');
+      docEl.className = 'doctor-3d-marker';
+      docEl.innerHTML = `
+        <div style="position: relative; cursor: pointer; transition: transform 0.2s;">
+          <div style="
+            width: ${isSelected ? '32px' : '26px'};
+            height: ${isSelected ? '32px' : '26px'};
+            background: ${isSelected ? '#10b981' : '#3b82f6'};
+            border: 3px solid #ffffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px ${isSelected ? 'rgba(16, 185, 129, 0.6)' : 'rgba(59, 130, 246, 0.6)'};
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+          ">
+            🩺
+          </div>
+        </div>
+      `;
+
+      const docPopup = new maplibregl.Popup({ offset: 25 }).setHTML(`
+        <div style="font-family: sans-serif; padding: 8px; min-width: 190px;">
+          <strong style="font-size: 14px; color: #0f172a;">${doc.name}</strong>
+          <p style="margin: 2px 0; font-size: 12px; color: #2563eb; font-weight: 600;">${doc.specialization}</p>
+          <p style="margin: 2px 0; font-size: 11px; color: #475569;">⭐ ${doc.rating} · 📍 ${doc.distanceText}</p>
+          <p style="margin: 4px 0 8px 0; font-size: 12px; font-weight: 700; color: #047857;">Fee: ₹${doc.fee}</p>
+          <button id="book-3d-btn-${doc._id}" style="width: 100%; background: #2563eb; color: white; border: none; padding: 7px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer;">
+            Book Appointment
+          </button>
+        </div>
+      `);
+
+      const marker = new maplibregl.Marker({ element: docEl })
+        .setLngLat([doc.lng, doc.lat])
+        .setPopup(docPopup)
+        .addTo(map);
+
+      docEl.addEventListener('click', () => {
+        setSelectedDoctor(doc);
+        draw3DRouteToDoctor(doc);
+      });
+
+      docPopup.on('open', () => {
+        const btn = document.getElementById(`book-3d-btn-${doc._id}`);
         if (btn) {
           btn.onclick = () => {
             if (onBookDoctor) onBookDoctor(doc);
@@ -191,51 +235,78 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
         }
       });
 
-      marker.on('click', () => {
-        setSelectedDoctor(doc);
-        drawRouteToDoctor(doc);
-      });
       markersRef.current.push(marker);
     });
 
-    // If tracking a doctor, draw polyline route
-    if (selectedDoctor) {
-      drawRouteToDoctor(selectedDoctor);
-    }
+  }, [userLocation, doctors, selectedDoctor, is3DMode, onBookDoctor]);
 
-  }, [userLocation, doctors, selectedDoctor, onBookDoctor]);
-
-  // Draw real-time Polyline direction route from patient to doctor
-  const drawRouteToDoctor = (doc) => {
+  // Draw 3D Route Line & Smooth Camera FlyTo
+  const draw3DRouteToDoctor = (doc) => {
     if (!mapInstanceRef.current || !doc) return;
     const map = mapInstanceRef.current;
 
     const patientLat = userLocation?.lat || 28.6139;
     const patientLng = userLocation?.lng || 77.2090;
 
-    if (polylineRef.current) {
-      map.removeLayer(polylineRef.current);
-    }
+    // Remove existing route layer & source
+    if (map.getLayer('route-line')) map.removeLayer('route-line');
+    if (map.getLayer('route-line-glow')) map.removeLayer('route-line-glow');
+    if (map.getSource('route')) map.removeSource('route');
 
-    // Draw route path line
-    const latlngs = [
-      [patientLat, patientLng],
-      [doc.lat, doc.lng]
-    ];
+    const routeGeoJSON = {
+      type: 'Feature',
+      properties: {},
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [patientLng, patientLat],
+          [doc.lng, doc.lat]
+        ]
+      }
+    };
 
-    const polyline = L.polyline(latlngs, {
-      color: '#3b82f6',
-      weight: 5,
-      opacity: 0.8,
-      dashArray: '8, 8',
-      lineCap: 'round'
-    }).addTo(map);
+    map.addSource('route', {
+      type: 'geojson',
+      data: routeGeoJSON
+    });
 
-    polylineRef.current = polyline;
+    // Add glowing background route layer
+    map.addLayer({
+      id: 'route-line-glow',
+      type: 'line',
+      source: 'route',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: {
+        'line-color': '#60a5fa',
+        'line-width': 10,
+        'line-opacity': 0.4
+      }
+    });
 
-    // Fit map bounds to show patient & doctor simultaneously
-    const bounds = L.latLngBounds(latlngs);
-    map.fitBounds(bounds, { padding: [50, 50] });
+    // Add high-contrast main route line layer
+    map.addLayer({
+      id: 'route-line',
+      type: 'line',
+      source: 'route',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: {
+        'line-color': '#3b82f6',
+        'line-dasharray': [2, 2],
+        'line-width': 5
+      }
+    });
+
+    // Smooth 3D Camera FlyTo Bounds
+    const bounds = new maplibregl.LngLatBounds()
+      .extend([patientLng, patientLat])
+      .extend([doc.lng, doc.lat]);
+
+    map.fitBounds(bounds, {
+      padding: { top: 80, bottom: 80, left: 80, right: 80 },
+      pitch: is3DMode ? 55 : 0,
+      bearing: -15,
+      duration: 1800
+    });
 
     setTrackingRoute({
       patientLat,
@@ -247,6 +318,20 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
       docName: doc.name,
       specialty: doc.specialization,
       address: doc.address
+    });
+  };
+
+  // Toggle between 3D Perspective and 2D Flat Mode
+  const toggle3DView = () => {
+    if (!mapInstanceRef.current) return;
+    const map = mapInstanceRef.current;
+    const next3D = !is3DMode;
+    setIs3DMode(next3D);
+
+    map.easeTo({
+      pitch: next3D ? 60 : 0,
+      bearing: next3D ? -17.6 : 0,
+      duration: 1200
     });
   };
 
@@ -269,7 +354,7 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
 
   return (
     <div className="space-y-6">
-      
+
       {/* Specialty Filter Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-[#111827] p-4 rounded-2xl border border-white/8">
         <div className="flex items-center gap-2 overflow-x-auto py-1 max-w-full no-scrollbar">
@@ -306,19 +391,31 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
         )}
       </div>
 
-      {/* Main Grid: Interactive Map + Doctor List Cards */}
+      {/* Main Grid: 3D Map + Doctor Cards Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Real-time Leaflet Map Component with Live Routing */}
-        <div className="lg:col-span-2 bg-[#111827] border border-white/8 rounded-2xl overflow-hidden h-[540px] relative shadow-2xl z-0 flex flex-col">
-          
+        {/* 3D Map Component Container */}
+        <div className="lg:col-span-2 bg-[#111827] border border-white/8 rounded-2xl overflow-hidden h-[560px] relative shadow-2xl z-0 flex flex-col">
+
+          {/* 3D Mode Toggle Button */}
+          <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-[#0d1117]/90 backdrop-blur-md border border-white/10 p-1.5 rounded-xl shadow-xl">
+            <button
+              onClick={toggle3DView}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                is3DMode ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <span>🏙️</span> {is3DMode ? '3D Buildings View' : '2D Flat View'}
+            </button>
+          </div>
+
           {/* Live Navigation Tracking Overlay Banner */}
           {trackingRoute && (
-            <div className="absolute top-3 left-3 right-3 z-10 bg-[#0d1117]/95 backdrop-blur-md border border-blue-500/30 p-3.5 rounded-xl shadow-2xl flex items-center justify-between gap-3 animate-fadeIn">
+            <div className="absolute top-16 left-4 right-14 z-10 bg-[#0d1117]/95 backdrop-blur-md border border-blue-500/30 p-3.5 rounded-xl shadow-2xl flex items-center justify-between gap-3 animate-fadeIn">
               <div>
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Live Route Tracking Active</span>
+                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Live 3D Route Active</span>
                 </div>
                 <p className="text-white text-sm font-bold mt-0.5">{trackingRoute.docName} ({trackingRoute.specialty})</p>
                 <p className="text-gray-400 text-xs mt-0.5">
@@ -349,11 +446,11 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
         </div>
 
         {/* Doctor Cards Sidebar */}
-        <div className="bg-[#111827] border border-white/8 rounded-2xl p-5 flex flex-col h-[540px]">
+        <div className="bg-[#111827] border border-white/8 rounded-2xl p-5 flex flex-col h-[560px]">
           <div className="flex items-center justify-between mb-4 flex-shrink-0">
             <div>
-              <h3 className="text-white font-bold text-lg">Nearby Doctors</h3>
-              <p className="text-gray-400 text-xs mt-0.5">{selectedSpecialty ? `${selectedSpecialty} Specialists` : 'All Medical Specialties'}</p>
+              <h3 className="text-white font-bold text-lg">Nearby Specialists</h3>
+              <p className="text-gray-400 text-xs mt-0.5">{selectedSpecialty ? `${selectedSpecialty} Doctors` : 'All Medical Specialties'}</p>
             </div>
             <span className="text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full font-medium">
               {doctors.length} Verified
@@ -379,7 +476,7 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
                       key={doc._id}
                       onClick={() => {
                         setSelectedDoctor(doc);
-                        drawRouteToDoctor(doc);
+                        draw3DRouteToDoctor(doc);
                       }}
                       className={`p-4 rounded-xl border transition-all cursor-pointer ${
                         isSelected
@@ -408,13 +505,13 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedDoctor(doc);
-                            drawRouteToDoctor(doc);
+                            draw3DRouteToDoctor(doc);
                           }}
                           className="bg-white/5 hover:bg-white/10 text-blue-300 hover:text-white border border-white/10 text-xs font-semibold py-2 rounded-xl transition-all flex items-center justify-center gap-1"
                         >
-                          <span>🧭</span> Track Route
+                          <span>🏙️</span> 3D Track Route
                         </button>
-                        
+
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
