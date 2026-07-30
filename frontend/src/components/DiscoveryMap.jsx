@@ -21,7 +21,7 @@ const getHaversineDistance = (lat1, lon1, lat2, lon2) => {
 // All-India Real Doctor Database Fallback
 const fallbackIndiaDoctors = [
   {
-    _id: 'pb_doc_1',
+    _id: '64b0f1a23c4d5e6f7a8b9c01',
     name: 'Dr. Harpreet Singh Johal',
     specialization: 'General Physician & Cardiology',
     qualifications: 'MBBS, MD (Medicine)',
@@ -34,7 +34,7 @@ const fallbackIndiaDoctors = [
     city: 'Punjab'
   },
   {
-    _id: 'pb_doc_2',
+    _id: '64b0f1a23c4d5e6f7a8b9c02',
     name: 'Dr. Simranjeet Kaur',
     specialization: 'Dermatologist & Cosmetologist',
     qualifications: 'MBBS, DVD, MD (Dermatology)',
@@ -47,7 +47,7 @@ const fallbackIndiaDoctors = [
     city: 'Punjab'
   },
   {
-    _id: 'pb_doc_3',
+    _id: '64b0f1a23c4d5e6f7a8b9c03',
     name: 'Dr. Manmohan Sharma',
     specialization: 'Orthopedic & Joint Replacement',
     qualifications: 'MBBS, MS (Ortho)',
@@ -60,7 +60,7 @@ const fallbackIndiaDoctors = [
     city: 'Punjab'
   },
   {
-    _id: 'hyd_doc_1',
+    _id: '64b0f1a23c4d5e6f7a8b9c04',
     name: 'Dr. Atukuri Naga Venkata Sai Dinesh',
     specialization: 'General Medicine & Geriatrics',
     qualifications: 'MBBS, MD (General Medicine)',
@@ -73,7 +73,7 @@ const fallbackIndiaDoctors = [
     city: 'Hyderabad'
   },
   {
-    _id: 'hyd_doc_2',
+    _id: '64b0f1a23c4d5e6f7a8b9c05',
     name: 'Dr. B Sridhar',
     specialization: 'Internal Medicine',
     qualifications: 'MBBS, DNB (Internal Medicine)',
@@ -86,7 +86,7 @@ const fallbackIndiaDoctors = [
     city: 'Hyderabad'
   },
   {
-    _id: 'hyd_doc_3',
+    _id: '64b0f1a23c4d5e6f7a8b9c06',
     name: 'Dr. Bangaru Mounika',
     specialization: 'Periodontist & Dentistry',
     qualifications: 'BDS, MDS (Periodontics)',
@@ -99,7 +99,7 @@ const fallbackIndiaDoctors = [
     city: 'Hyderabad'
   },
   {
-    _id: 'hyd_doc_4',
+    _id: '64b0f1a23c4d5e6f7a8b9c07',
     name: 'Dr. Dasareddygari Anusha',
     specialization: 'ENT Specialist',
     qualifications: 'MBBS, MS (ENT)',
@@ -112,7 +112,7 @@ const fallbackIndiaDoctors = [
     city: 'Hyderabad'
   },
   {
-    _id: 'del_doc_1',
+    _id: '64b0f1a23c4d5e6f7a8b9c08',
     name: 'Dr. Rajesh Sharma',
     specialization: 'Cardiologist',
     qualifications: 'MBBS, MD, DM (Cardiology)',
@@ -125,7 +125,7 @@ const fallbackIndiaDoctors = [
     city: 'Delhi NCR'
   },
   {
-    _id: 'del_doc_2',
+    _id: '64b0f1a23c4d5e6f7a8b9c09',
     name: 'Dr. Priya Patel',
     specialization: 'Dermatologist',
     qualifications: 'MBBS, MD (Dermatology)',
@@ -138,7 +138,7 @@ const fallbackIndiaDoctors = [
     city: 'Delhi NCR'
   },
   {
-    _id: 'kol_doc_1',
+    _id: '64b0f1a23c4d5e6f7a8b9c10',
     name: 'Dr. Ananya Roy',
     specialization: 'Gastroenterologist',
     qualifications: 'MBBS, DM (Gastro)',
