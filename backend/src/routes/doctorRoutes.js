@@ -5,12 +5,14 @@ const {
   getDoctorById,
   updateMyDoctorProfile,
   getAllDoctorsForAdmin,
-  verifyDoctorByAdmin
+  verifyDoctorByAdmin,
+  getLiveNearbyHospitals
 } = require('../controllers/doctorController');
 const { protect, restrictTo } = require('../middleware/authMiddleware');
 
 // Public routes
 router.get('/', getDoctors);
+router.get('/live-nearby-hospitals', getLiveNearbyHospitals);
 
 // Doctor routes
 router.get('/me/profile', protect, restrictTo('Doctor'), getDoctorById);

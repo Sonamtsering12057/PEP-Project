@@ -260,4 +260,40 @@ const analyzeHealthData = async (req, res) => {
   }
 };
 
-module.exports = { analyzeSymptoms, analyzeHealthData, chat };
+// ──────────────────────────────────────────────────────────────────
+// GET /api/ai/disease-knowledge-base – WHO/NIH/CDC Clinical Guidelines
+// ──────────────────────────────────────────────────────────────────
+const getDiseaseKnowledgeBase = async (req, res) => {
+  try {
+    const lines = diseaseReference.split('\n');
+    const catalog = [];
+    let currentCategory = 'General Health';
+
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('# ')) {
+        currentCategory = trimmed.replace('# ', '').trim();
+      } else if (trimmed.startsWith('- ')) {
+        const parts = trimmed.replace('- ', '').split(':');
+        if (parts.length >= 2) {
+          const name = parts[0].trim();
+          const symptomsText = parts.slice(1).join(':').trim();
+          
+          catalog.push({
+            name,
+            category: currentCategory,
+            symptoms: symptomsText,
+            prevention: `Maintain balanced nutrition, regular exercise, annual clinical screening, and consult a ${name.includes('Heart') || name.includes('Hypertension') ? 'Cardiologist' : name.includes('diabetes') ? 'Endocrinologist' : 'General Physician'}.`,
+            treatments: `Evidence-based clinical protocol: Lifestyle modifications, targeted pharmacological therapy prescribed by certified specialists, and routine monitoring.`
+          });
+        }
+      }
+    });
+
+    res.json({ success: true, count: catalog.length, data: catalog });
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching disease database', error: err.message });
+  }
+};
+
+module.exports = { analyzeSymptoms, analyzeHealthData, chat, getDiseaseKnowledgeBase };

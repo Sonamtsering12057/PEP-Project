@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { analyzeSymptoms, analyzeHealthData, chat } = require('../controllers/aiController');
+const { analyzeSymptoms, analyzeHealthData, chat, getDiseaseKnowledgeBase } = require('../controllers/aiController');
 
-router.post('/chat', chat);           // NEW - multi-turn conversational chat
-router.post('/triage', analyzeSymptoms);    // kept for backward compat
-router.post('/health-analysis', analyzeHealthData);
+router.post('/chat', chat);           // Multi-turn conversational chat
+router.post('/triage', analyzeSymptoms);    // Symptom triage
+router.post('/health-analysis', analyzeHealthData); // Health intelligence correlation
+router.get('/disease-knowledge-base', getDiseaseKnowledgeBase); // WHO/NIH/CDC Disease Directory
 
 module.exports = router;

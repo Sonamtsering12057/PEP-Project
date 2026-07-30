@@ -18,6 +18,8 @@ const getHaversineDistance = (lat1, lon1, lat2, lon2) => {
 
 const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
   const [doctors, setDoctors] = useState([]);
+  const [liveHospitals, setLiveHospitals] = useState([]);
+  const [activeTab, setActiveTab] = useState('doctors'); // 'doctors' | 'live-hospitals'
   const [selectedSpecialty, setSelectedSpecialty] = useState(recommendedSpecialty || '');
   const [selectedCity, setSelectedCity] = useState('');
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -25,6 +27,12 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [trackingRoute, setTrackingRoute] = useState(null);
   const [is3DMode, setIs3DMode] = useState(true);
+
+  // WHO / NIH Disease Reference Knowledge Base Modal
+  const [diseaseModalOpen, setDiseaseModalOpen] = useState(false);
+  const [diseaseCatalog, setDiseaseCatalog] = useState([]);
+  const [diseaseFilter, setDiseaseFilter] = useState('');
+  const [loadingDiseases, setLoadingDiseases] = useState(false);
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -37,7 +45,7 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
     }
   }, [recommendedSpecialty]);
 
-  // Fetch doctors from backend API with Apollo Clinic search parameters
+  // Fetch doctors & Live OpenStreetMap Nearby Hospitals
   useEffect(() => {
     const fetchDoctors = async () => {
       setLoading(true);
@@ -90,6 +98,37 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
     fetchDoctors();
   }, [selectedSpecialty, selectedCity, searchKeyword, userLocation]);
 
+  // Fetch Live Real-Time Nearby OpenStreetMap Hospitals
+  const fetchLiveHospitals = async () => {
+    setLoading(true);
+    try {
+      const lat = userLocation?.lat || 28.6139;
+      const lng = userLocation?.lng || 77.2090;
+      const res = await axios.get(`http://localhost:5001/api/doctors/live-nearby-hospitals?lat=${lat}&lng=${lng}`);
+      setLiveHospitals(res.data?.data || []);
+      setActiveTab('live-hospitals');
+    } catch (err) {
+      console.error("Error fetching live hospitals:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch WHO/NIH Disease Knowledge Base
+  const fetchDiseaseKnowledgeBase = async () => {
+    setDiseaseModalOpen(true);
+    if (diseaseCatalog.length > 0) return;
+    setLoadingDiseases(true);
+    try {
+      const res = await axios.get('http://localhost:5001/api/ai/disease-knowledge-base');
+      setDiseaseCatalog(res.data?.data || []);
+    } catch (err) {
+      console.error("Error fetching disease catalog:", err);
+    } finally {
+      setLoadingDiseases(false);
+    }
+  };
+
   // Initialize MapLibre 3D Vector Engine
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -108,14 +147,12 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
         antialias: true
       });
 
-      // Add 3D Navigation Controls
       map.addControl(new maplibregl.NavigationControl({
         visualizePitch: true,
         showCompass: true,
         showZoom: true
       }), 'top-right');
 
-      // Add 3D Extruded Buildings Layer
       map.on('style.load', () => {
         const layers = map.getStyle().layers;
         let labelLayerId;
@@ -155,7 +192,7 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
 
-    // Add Patient 3D Location Marker
+    // Patient 3D Live Location Marker
     const patientLng = userLocation?.lng || centerLng;
     const patientLat = userLocation?.lat || centerLat;
 
@@ -182,69 +219,101 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
 
     markersRef.current.push(pMarker);
 
-    // Add Doctor 3D Markers
-    doctors.forEach((doc) => {
-      const isSelected = selectedDoctor?._id === doc._id;
+    // Active Display: Doctors OR Live Nearby OpenStreetMap Hospitals
+    if (activeTab === 'doctors') {
+      doctors.forEach((doc) => {
+        const isSelected = selectedDoctor?._id === doc._id;
 
-      const docEl = document.createElement('div');
-      docEl.className = 'doctor-3d-marker';
-      docEl.innerHTML = `
-        <div style="position: relative; cursor: pointer; transition: transform 0.2s;">
-          <div style="
-            width: ${isSelected ? '32px' : '26px'};
-            height: ${isSelected ? '32px' : '26px'};
-            background: ${isSelected ? '#10b981' : '#3b82f6'};
-            border: 3px solid #ffffff;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 15px ${isSelected ? 'rgba(16, 185, 129, 0.6)' : 'rgba(59, 130, 246, 0.6)'};
-            color: white;
-            font-size: 12px;
-            font-weight: bold;
-          ">
-            🩺
+        const docEl = document.createElement('div');
+        docEl.className = 'doctor-3d-marker';
+        docEl.innerHTML = `
+          <div style="position: relative; cursor: pointer; transition: transform 0.2s;">
+            <div style="
+              width: ${isSelected ? '32px' : '26px'};
+              height: ${isSelected ? '32px' : '26px'};
+              background: ${isSelected ? '#10b981' : '#2563eb'};
+              border: 3px solid #ffffff;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              box-shadow: 0 4px 15px ${isSelected ? 'rgba(16, 185, 129, 0.6)' : 'rgba(37, 99, 235, 0.6)'};
+              color: white;
+              font-size: 12px;
+              font-weight: bold;
+            ">
+              🩺
+            </div>
           </div>
-        </div>
-      `;
+        `;
 
-      const docPopup = new maplibregl.Popup({ offset: 25 }).setHTML(`
-        <div style="font-family: sans-serif; padding: 8px; min-width: 200px;">
-          <strong style="font-size: 14px; color: #0f172a;">${doc.name}</strong>
-          <p style="margin: 2px 0; font-size: 11px; color: #64748b;">🎓 ${doc.qualifications}</p>
-          <p style="margin: 2px 0; font-size: 12px; color: #2563eb; font-weight: 600;">${doc.specialization}</p>
-          <p style="margin: 2px 0; font-size: 11px; color: #475569;">⭐ ${doc.rating} · ⏳ ${doc.experience} · 📍 ${doc.distanceText}</p>
-          <p style="margin: 4px 0 8px 0; font-size: 12px; font-weight: 700; color: #047857;">Consultation Fee: ₹${doc.fee}</p>
-          <button id="book-apollo-btn-${doc._id}" style="width: 100%; background: #2563eb; color: white; border: none; padding: 7px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer;">
-            Book Appointment
-          </button>
-        </div>
-      `);
+        const docPopup = new maplibregl.Popup({ offset: 25 }).setHTML(`
+          <div style="font-family: sans-serif; padding: 8px; min-width: 200px;">
+            <strong style="font-size: 14px; color: #0f172a;">${doc.name}</strong>
+            <p style="margin: 2px 0; font-size: 11px; color: #64748b;">🎓 ${doc.qualifications}</p>
+            <p style="margin: 2px 0; font-size: 12px; color: #2563eb; font-weight: 600;">${doc.specialization}</p>
+            <p style="margin: 2px 0; font-size: 11px; color: #475569;">⭐ ${doc.rating} · ⏳ ${doc.experience} · 📍 ${doc.distanceText}</p>
+            <p style="margin: 4px 0 8px 0; font-size: 12px; font-weight: 700; color: #047857;">Consultation Fee: ₹${doc.fee}</p>
+            <button id="book-apollo-btn-${doc._id}" style="width: 100%; background: #2563eb; color: white; border: none; padding: 7px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer;">
+              Book Appointment
+            </button>
+          </div>
+        `);
 
-      const marker = new maplibregl.Marker({ element: docEl })
-        .setLngLat([doc.lng, doc.lat])
-        .setPopup(docPopup)
-        .addTo(map);
+        const marker = new maplibregl.Marker({ element: docEl })
+          .setLngLat([doc.lng, doc.lat])
+          .setPopup(docPopup)
+          .addTo(map);
 
-      docEl.addEventListener('click', () => {
-        setSelectedDoctor(doc);
-        draw3DRouteToDoctor(doc);
+        docEl.addEventListener('click', () => {
+          setSelectedDoctor(doc);
+          draw3DRouteToDoctor(doc);
+        });
+
+        docPopup.on('open', () => {
+          const btn = document.getElementById(`book-apollo-btn-${doc._id}`);
+          if (btn) {
+            btn.onclick = () => {
+              if (onBookDoctor) onBookDoctor(doc);
+            };
+          }
+        });
+
+        markersRef.current.push(marker);
       });
+    } else if (activeTab === 'live-hospitals') {
+      liveHospitals.forEach((hosp) => {
+        const hospEl = document.createElement('div');
+        hospEl.className = 'hospital-3d-marker';
+        hospEl.innerHTML = `
+          <div style="position: relative; cursor: pointer;">
+            <div style="width: 28px; height: 28px; background: #059669; border: 3px solid #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(5, 150, 105, 0.6); color: white; font-size: 13px; font-weight: bold;">
+              🏥
+            </div>
+          </div>
+        `;
 
-      docPopup.on('open', () => {
-        const btn = document.getElementById(`book-apollo-btn-${doc._id}`);
-        if (btn) {
-          btn.onclick = () => {
-            if (onBookDoctor) onBookDoctor(doc);
-          };
-        }
+        const hospPopup = new maplibregl.Popup({ offset: 25 }).setHTML(`
+          <div style="font-family: sans-serif; padding: 8px; min-width: 200px;">
+            <strong style="font-size: 14px; color: #059669;">🏥 ${hosp.name}</strong>
+            <p style="margin: 3px 0; font-size: 11px; color: #475569;">📍 ${hosp.address}</p>
+            <p style="margin: 2px 0; font-size: 11px; color: #2563eb; font-weight: 600;">📞 ${hosp.phone}</p>
+            <a href="tel:${hosp.phone}" style="display: block; text-align: center; margin-top: 6px; background: #059669; color: white; border: none; padding: 6px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; text-decoration: none;">
+              Call Hospital Emergency
+            </a>
+          </div>
+        `);
+
+        const marker = new maplibregl.Marker({ element: hospEl })
+          .setLngLat([hosp.lng, hosp.lat])
+          .setPopup(hospPopup)
+          .addTo(map);
+
+        markersRef.current.push(marker);
       });
+    }
 
-      markersRef.current.push(marker);
-    });
-
-  }, [userLocation, doctors, selectedDoctor, is3DMode, onBookDoctor]);
+  }, [userLocation, doctors, liveHospitals, activeTab, selectedDoctor, is3DMode, onBookDoctor]);
 
   // Draw 3D Route Line & Smooth Camera FlyTo
   const draw3DRouteToDoctor = (doc) => {
@@ -293,7 +362,7 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
       source: 'route',
       layout: { 'line-join': 'round', 'line-cap': 'round' },
       paint: {
-        'line-color': '#3b82f6',
+        'line-color': '#2563eb',
         'line-dasharray': [2, 2],
         'line-width': 5
       }
@@ -364,83 +433,128 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
     'Kolkata'
   ];
 
+  const filteredDiseases = diseaseCatalog.filter(d => 
+    d.name.toLowerCase().includes(diseaseFilter.toLowerCase()) ||
+    d.category.toLowerCase().includes(diseaseFilter.toLowerCase()) ||
+    d.symptoms.toLowerCase().includes(diseaseFilter.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
 
-      {/* Apollo Clinic Multi-Criteria Search & Filter Header */}
-      <div className="bg-[#111827] p-5 rounded-2xl border border-white/8 space-y-4">
+      {/* Action Header: Search & Real-Time OpenStreetMap Places & WHO Knowledge Hub */}
+      <div className="bg-white border border-gray-200 p-5 rounded-2xl shadow-md space-y-4">
         
-        {/* Search Bar + City Selector */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="md:col-span-2 relative">
-            <input
-              type="text"
-              value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
-              placeholder="🔍 Search Doctor by Name, Specialty, or Symptoms..."
-              className="w-full bg-[#0d1117] border border-white/10 text-white placeholder-gray-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-            />
-            {searchKeyword && (
-              <button
-                onClick={() => setSearchKeyword('')}
-                className="absolute right-3 top-2.5 text-xs text-gray-400 hover:text-white"
-              >
-                ✕ Clear
-              </button>
-            )}
-          </div>
-
-          <div>
-            <select
-              value={selectedCity}
-              onChange={(e) => setSelectedCity(e.target.value === 'All Cities' ? '' : e.target.value)}
-              className="w-full bg-[#0d1117] border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActiveTab('doctors')}
+              className={`text-xs font-bold px-4 py-2 rounded-xl transition-all ${
+                activeTab === 'doctors'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
             >
-              {cityList.map(city => (
-                <option key={city} value={city === 'All Cities' ? '' : city}>{city === 'All Cities' ? '📍 Select City (All Cities)' : `📍 ${city}`}</option>
-              ))}
-            </select>
+              🩺 Doctors & Specialists ({doctors.length})
+            </button>
+            <button
+              onClick={() => {
+                if (liveHospitals.length === 0) fetchLiveHospitals();
+                else setActiveTab('live-hospitals');
+              }}
+              className={`text-xs font-bold px-4 py-2 rounded-xl transition-all ${
+                activeTab === 'live-hospitals'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+              }`}
+            >
+              🏥 Live OpenStreetMap Hospitals ({liveHospitals.length})
+            </button>
           </div>
+
+          <button
+            onClick={fetchDiseaseKnowledgeBase}
+            className="text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-xl transition-all flex items-center gap-1.5"
+          >
+            <span>📚</span> WHO / NIH Disease Reference Hub
+          </button>
         </div>
 
-        {/* Specialty Filter Buttons */}
-        <div className="flex items-center gap-2 overflow-x-auto py-1 max-w-full no-scrollbar pt-1 border-t border-white/5">
-          <span className="text-xs font-semibold text-gray-400 whitespace-nowrap mr-1">Specialty Filter:</span>
-          {specialtiesList.map((sp) => {
-            const isSelected = (sp === 'All Specialties' && !selectedSpecialty) || selectedSpecialty === sp;
-            return (
-              <button
-                key={sp}
-                onClick={() => {
-                  setSelectedSpecialty(sp === 'All Specialties' ? '' : sp);
-                  setSelectedDoctor(null);
-                  setTrackingRoute(null);
-                }}
-                className={`text-xs px-3 py-1.5 rounded-xl font-medium transition-all whitespace-nowrap ${
-                  isSelected
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                    : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/5'
-                }`}
-              >
-                {sp}
-              </button>
-            );
-          })}
-        </div>
+        {/* Search Bar + City Selector */}
+        {activeTab === 'doctors' && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="md:col-span-2 relative">
+                <input
+                  type="text"
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  placeholder="🔍 Search Doctor by Name, Specialty, or Symptoms..."
+                  className="w-full bg-slate-50 border border-gray-300 text-gray-900 placeholder-gray-400 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                />
+                {searchKeyword && (
+                  <button
+                    onClick={() => setSearchKeyword('')}
+                    className="absolute right-3 top-2.5 text-xs text-gray-500 hover:text-gray-900"
+                  >
+                    ✕ Clear
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <select
+                  value={selectedCity}
+                  onChange={(e) => setSelectedCity(e.target.value === 'All Cities' ? '' : e.target.value)}
+                  className="w-full bg-slate-50 border border-gray-300 text-gray-900 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                >
+                  {cityList.map(city => (
+                    <option key={city} value={city === 'All Cities' ? '' : city}>{city === 'All Cities' ? '📍 Select City (All Cities)' : `📍 ${city}`}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Specialty Filter Buttons */}
+            <div className="flex items-center gap-2 overflow-x-auto py-1 max-w-full no-scrollbar pt-1 border-t border-gray-100">
+              <span className="text-xs font-semibold text-gray-500 whitespace-nowrap mr-1">Specialty:</span>
+              {specialtiesList.map((sp) => {
+                const isSelected = (sp === 'All Specialties' && !selectedSpecialty) || selectedSpecialty === sp;
+                return (
+                  <button
+                    key={sp}
+                    onClick={() => {
+                      setSelectedSpecialty(sp === 'All Specialties' ? '' : sp);
+                      setSelectedDoctor(null);
+                      setTrackingRoute(null);
+                    }}
+                    className={`text-xs px-3 py-1.5 rounded-xl font-semibold transition-all whitespace-nowrap ${
+                      isSelected
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                    }`}
+                  >
+                    {sp}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Main Grid: 3D Map + Apollo Style Doctor Cards */}
+      {/* Main Grid: 3D Map + Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* 3D Map Container */}
-        <div className="lg:col-span-2 bg-[#111827] border border-white/8 rounded-2xl overflow-hidden h-[580px] relative shadow-2xl z-0 flex flex-col">
+        <div className="lg:col-span-2 bg-white border border-gray-200 rounded-2xl overflow-hidden h-[580px] relative shadow-xl flex flex-col">
 
           {/* 3D Mode Toggle Button */}
-          <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-[#0d1117]/90 backdrop-blur-md border border-white/10 p-1.5 rounded-xl shadow-xl">
+          <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-white/95 backdrop-blur-md border border-gray-200 p-1.5 rounded-xl shadow-lg">
             <button
               onClick={toggle3DView}
-              className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
-                is3DMode ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+              className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                is3DMode ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               <span>🏙️</span> {is3DMode ? '3D Buildings View' : '2D Flat View'}
@@ -449,15 +563,15 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
 
           {/* Live Route Banner */}
           {trackingRoute && (
-            <div className="absolute top-16 left-4 right-14 z-10 bg-[#0d1117]/95 backdrop-blur-md border border-blue-500/30 p-3.5 rounded-xl shadow-2xl flex items-center justify-between gap-3 animate-fadeIn">
+            <div className="absolute top-16 left-4 right-14 z-10 bg-white/95 backdrop-blur-md border border-blue-200 p-3.5 rounded-xl shadow-2xl flex items-center justify-between gap-3 animate-fadeIn">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Live 3D Route Active</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                  <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Live 3D Route Active</span>
                 </div>
-                <p className="text-white text-sm font-bold mt-0.5">{trackingRoute.docName} ({trackingRoute.specialty})</p>
-                <p className="text-gray-400 text-xs mt-0.5">
-                  📍 {trackingRoute.address} · 🚘 <strong className="text-white">{trackingRoute.distanceKm} km</strong> (~{trackingRoute.estDriveTime} mins drive)
+                <p className="text-gray-900 text-sm font-bold mt-0.5">{trackingRoute.docName} ({trackingRoute.specialty})</p>
+                <p className="text-gray-600 text-xs mt-0.5">
+                  📍 {trackingRoute.address} · 🚘 <strong className="text-gray-900">{trackingRoute.distanceKm} km</strong> (~{trackingRoute.estDriveTime} mins drive)
                 </p>
               </div>
 
@@ -466,13 +580,13 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
                   href={`https://www.google.com/maps/dir/?api=1&origin=${trackingRoute.patientLat},${trackingRoute.patientLng}&destination=${trackingRoute.docLat},${trackingRoute.docLng}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-all flex items-center gap-1 shadow-md shadow-emerald-600/20 whitespace-nowrap"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition-all flex items-center gap-1 shadow-md shadow-emerald-600/20 whitespace-nowrap"
                 >
                   <span>🗺️</span> Open Google Maps
                 </a>
                 <button
                   onClick={() => setTrackingRoute(null)}
-                  className="text-gray-400 hover:text-white p-1 text-sm"
+                  className="text-gray-400 hover:text-gray-800 p-1 text-sm font-bold"
                 >
                   ✕
                 </button>
@@ -483,28 +597,32 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
           <div ref={mapContainerRef} style={{ width: '100%', height: '100%', borderRadius: '16px' }} />
         </div>
 
-        {/* Doctor Cards Sidebar */}
-        <div className="bg-[#111827] border border-white/8 rounded-2xl p-5 flex flex-col h-[580px]">
+        {/* Doctor Cards / Live Hospitals Sidebar */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col h-[580px] shadow-sm">
           <div className="flex items-center justify-between mb-4 flex-shrink-0">
             <div>
-              <h3 className="text-white font-bold text-lg">Verified Practitioners</h3>
-              <p className="text-gray-400 text-xs mt-0.5">Apollo Clinic & Specialist Network</p>
+              <h3 className="text-gray-900 font-extrabold text-lg">
+                {activeTab === 'doctors' ? 'Verified Specialists' : 'Real-Time OpenStreetMap Places'}
+              </h3>
+              <p className="text-gray-500 text-xs mt-0.5">
+                {activeTab === 'doctors' ? 'Apollo & Verified Specialist Network' : 'Live nearby hospitals & emergency clinics'}
+              </p>
             </div>
-            <span className="text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full font-medium">
-              {doctors.length} Available
+            <span className="text-xs text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full font-bold">
+              {activeTab === 'doctors' ? `${doctors.length} Doctors` : `${liveHospitals.length} Centers`}
             </span>
           </div>
 
           {loading ? (
             <div className="flex-1 flex items-center justify-center">
-              <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
             </div>
-          ) : (
+          ) : activeTab === 'doctors' ? (
             <div className="flex-1 overflow-y-auto space-y-3 pr-1">
               {doctors.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-5xl mb-3">🩺</div>
-                  <p className="text-gray-400 text-sm">No doctors match your search query.</p>
+                  <p className="text-gray-500 text-sm font-medium">No doctors match your search query.</p>
                 </div>
               ) : (
                 doctors.map((doc) => {
@@ -518,26 +636,26 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
                       }}
                       className={`p-4 rounded-xl border transition-all cursor-pointer ${
                         isSelected
-                          ? 'bg-blue-600/15 border-blue-500/50 shadow-lg shadow-blue-600/10'
-                          : 'bg-white/3 border-white/5 hover:border-white/15'
+                          ? 'bg-blue-50/80 border-blue-400 shadow-md'
+                          : 'bg-slate-50/60 border-gray-200 hover:border-blue-300'
                       }`}
                     >
                       <div className="flex justify-between items-start mb-1.5">
                         <div>
-                          <h4 className="text-white font-bold text-sm">{doc.name}</h4>
-                          <p className="text-blue-400 text-xs font-semibold">{doc.specialization}</p>
-                          <p className="text-gray-400 text-[11px] mt-0.5">🎓 {doc.qualifications}</p>
+                          <h4 className="text-gray-900 font-bold text-sm">{doc.name}</h4>
+                          <p className="text-blue-600 text-xs font-semibold">{doc.specialization}</p>
+                          <p className="text-gray-500 text-[11px] mt-0.5">🎓 {doc.qualifications}</p>
                         </div>
-                        <span className="text-xs font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-md flex-shrink-0">
+                        <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 flex-shrink-0">
                           ⭐ {doc.rating}
                         </span>
                       </div>
 
-                      <p className="text-gray-400 text-[11px] truncate mt-1">📍 {doc.address}</p>
+                      <p className="text-gray-600 text-[11px] truncate mt-1">📍 {doc.address}</p>
 
-                      <div className="flex items-center justify-between text-xs text-gray-400 mt-2.5 pt-2 border-t border-white/5">
+                      <div className="flex items-center justify-between text-xs text-gray-500 mt-2.5 pt-2 border-t border-gray-200">
                         <span>⏳ {doc.experience} · 🚘 {doc.distanceText}</span>
-                        <span className="text-emerald-400 font-bold">₹{doc.fee} / consult</span>
+                        <span className="text-emerald-700 font-bold">₹{doc.fee} / consult</span>
                       </div>
 
                       <div className="mt-3 grid grid-cols-2 gap-2">
@@ -547,7 +665,7 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
                             setSelectedDoctor(doc);
                             draw3DRouteToDoctor(doc);
                           }}
-                          className="bg-white/5 hover:bg-white/10 text-blue-300 hover:text-white border border-white/10 text-xs font-semibold py-2 rounded-xl transition-all flex items-center justify-center gap-1"
+                          className="bg-white hover:bg-gray-100 text-gray-800 border border-gray-300 text-xs font-semibold py-2 rounded-xl transition-all flex items-center justify-center gap-1"
                         >
                           <span>🏙️</span> 3D Track Route
                         </button>
@@ -557,7 +675,7 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
                             e.stopPropagation();
                             if (onBookDoctor) onBookDoctor(doc);
                           }}
-                          className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold py-2 rounded-xl transition-all shadow-md shadow-blue-600/20"
+                          className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-xl transition-all shadow-sm"
                         >
                           Book Appointment
                         </button>
@@ -567,10 +685,88 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
                 })
               )}
             </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {liveHospitals.map((hosp) => (
+                <div key={hosp.id} className="p-4 rounded-xl bg-slate-50 border border-gray-200 space-y-2">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h4 className="text-gray-900 font-bold text-sm">🏥 {hosp.name}</h4>
+                      <p className="text-emerald-700 text-xs font-semibold">{hosp.type}</p>
+                    </div>
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                      Open 24/7
+                    </span>
+                  </div>
+                  <p className="text-gray-600 text-xs">📍 {hosp.address}</p>
+                  <p className="text-blue-600 text-xs font-semibold">📞 {hosp.phone}</p>
+                  <a
+                    href={`tel:${hosp.phone}`}
+                    className="block text-center bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-xl transition-all shadow-sm"
+                  >
+                    Call Hospital Emergency
+                  </a>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
       </div>
+
+      {/* WHO / NIH Clinical Disease Reference Modal */}
+      {diseaseModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-3xl w-full p-6 max-h-[85vh] flex flex-col shadow-2xl border border-gray-200">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-200">
+              <div>
+                <h3 className="text-xl font-extrabold text-gray-900">📚 WHO & NIH Clinical Disease Reference Catalog</h3>
+                <p className="text-gray-500 text-xs mt-0.5">Evidence-based disease descriptions, symptoms, prevention, and specialist protocols.</p>
+              </div>
+              <button
+                onClick={() => setDiseaseModalOpen(false)}
+                className="text-gray-400 hover:text-gray-800 text-lg font-bold p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="py-4">
+              <input
+                type="text"
+                value={diseaseFilter}
+                onChange={(e) => setDiseaseFilter(e.target.value)}
+                placeholder="🔍 Search Disease, Symptom (e.g. Hypertension, Diabetes, Asthma, Malaria)..."
+                className="w-full bg-slate-50 border border-gray-300 text-gray-900 placeholder-gray-400 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+              />
+            </div>
+
+            {loadingDiseases ? (
+              <div className="py-16 text-center">
+                <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                <p className="text-gray-500 text-sm">Loading clinical reference data...</p>
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+                {filteredDiseases.map((dis, idx) => (
+                  <div key={idx} className="bg-slate-50 border border-gray-200 rounded-xl p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-gray-900 font-bold text-base">{dis.name}</h4>
+                      <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full">
+                        {dis.category}
+                      </span>
+                    </div>
+                    <p className="text-gray-700 text-xs"><strong>🤒 Symptoms:</strong> {dis.symptoms}</p>
+                    <p className="text-gray-600 text-xs"><strong>🛡️ Prevention:</strong> {dis.prevention}</p>
+                    <p className="text-gray-600 text-xs"><strong>🩺 Clinical Protocol:</strong> {dis.treatments}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
