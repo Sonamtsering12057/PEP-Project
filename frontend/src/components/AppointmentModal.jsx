@@ -134,7 +134,7 @@ const AppointmentModal = ({ isOpen, onClose, onBooked, preselectedDoctor }) => {
             >
               {doctors.map((doc) => (
                 <option key={doc._id} value={doc._id} className="bg-[#111827] text-white">
-                  Dr. {doc.name} — {doc.doctorProfile?.specialization || doc.specialization || 'General Physician'} (₹{doc.doctorProfile?.consultationFee || doc.fee || 500})
+                  Dr. {doc.name} — {doc.doctorProfile?.specialization || doc.specialization || 'General Physician'}
                 </option>
               ))}
             </select>
@@ -146,8 +146,8 @@ const AppointmentModal = ({ isOpen, onClose, onBooked, preselectedDoctor }) => {
                 <p className="font-bold text-blue-200">Dr. {currentDoc.name}</p>
                 <p className="text-blue-400">{currentDoc.doctorProfile?.specialization || currentDoc.specialization}</p>
               </div>
-              <span className="font-extrabold text-white text-sm bg-blue-600/40 px-3 py-1 rounded-lg">
-                ₹{currentDoc.doctorProfile?.consultationFee || currentDoc.fee || 500}
+              <span className="font-semibold text-emerald-400 text-xs bg-emerald-500/20 px-3 py-1 rounded-lg">
+                ✓ Available
               </span>
             </div>
           )}

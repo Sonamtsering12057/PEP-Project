@@ -251,7 +251,7 @@ const AdminDashboard = () => {
                               </span>
                             </div>
                             <p className="text-blue-400 text-xs font-medium mt-0.5">
-                              {doc.doctorProfile?.specialization || 'General Physician'} · Fee: ₹{doc.doctorProfile?.consultationFee || 500}
+                              {doc.doctorProfile?.specialization || 'General Physician'}
                             </p>
                             <p className="text-gray-500 text-xs mt-1">
                               📧 {doc.email} | 📍 {doc.doctorProfile?.clinicLocation?.address || 'Address not specified'}

@@ -292,22 +292,7 @@ const DoctorDashboard = () => {
                       ))}
                     </select>
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
-                      Consultation Fee (₹)
-                    </label>
-                    <input
-                      type="number"
-                      value={profileData.consultationFee}
-                      onChange={(e) => setProfileData({ ...profileData, consultationFee: e.target.value })}
-                      className="w-full bg-[#0d1117] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors"
-                      placeholder="500"
-                      required
-                    />
-                  </div>
                 </div>
-
                 <div>
                   <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
                     Degrees & Qualifications

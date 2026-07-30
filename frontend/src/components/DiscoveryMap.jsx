@@ -452,8 +452,7 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
             <p style="margin: 2px 0; font-size: 11px; color: #64748b;">🎓 ${doc.qualifications}</p>
             <p style="margin: 2px 0; font-size: 12px; color: #2563eb; font-weight: 600;">${doc.specialization}</p>
             <p style="margin: 2px 0; font-size: 11px; color: #475569;">⭐ ${doc.rating} · ⏳ ${doc.experience} · 📍 ${doc.distanceText}</p>
-            <p style="margin: 4px 0 8px 0; font-size: 12px; font-weight: 700; color: #047857;">Consultation Fee: ₹${doc.fee}</p>
-            <button id="book-apollo-btn-${doc._id}" style="width: 100%; background: #2563eb; color: white; border: none; padding: 7px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer;">
+            <button id="book-apollo-btn-${doc._id}" style="width: 100%; margin-top: 6px; background: #2563eb; color: white; border: none; padding: 7px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer;">
               Book Appointment
             </button>
           </div>
@@ -854,7 +853,6 @@ const DiscoveryMap = ({ userLocation, recommendedSpecialty, onBookDoctor }) => {
 
                       <div className="flex items-center justify-between text-xs text-gray-500 mt-2.5 pt-2 border-t border-gray-200">
                         <span>⏳ {doc.experience} · 🚘 {doc.distanceText}</span>
-                        <span className="text-emerald-700 font-bold">₹{doc.fee} / consult</span>
                       </div>
 
                       <div className="mt-3 grid grid-cols-2 gap-2">
