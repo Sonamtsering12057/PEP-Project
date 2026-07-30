@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE } from '../config/api';
 
 const AppointmentModal = ({ isOpen, onClose, onBooked, preselectedDoctor }) => {
   const [doctors, setDoctors] = useState([]);
   const [selectedDoctorId, setSelectedDoctorId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [timeSlot, setTimeSlot] = useState('10:00-10:30');
+  const [timeSlot, setTimeSlot] = useState('09:00 - 09:30 AM');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -22,7 +23,7 @@ const AppointmentModal = ({ isOpen, onClose, onBooked, preselectedDoctor }) => {
 
   const fetchDoctors = async () => {
     try {
-      const res = await axios.get('http://localhost:5001/api/doctors');
+      const res = await axios.get(`${API_BASE}/api/doctors`);
       const docs = res.data || [];
       setDoctors(docs);
       
@@ -53,7 +54,7 @@ const AppointmentModal = ({ isOpen, onClose, onBooked, preselectedDoctor }) => {
       const docObj = doctors.find(d => d._id === selectedDoctorId);
       const fee = docObj?.doctorProfile?.consultationFee || docObj?.fee || 500;
 
-      const res = await axios.post('http://localhost:5001/api/appointments/book', {
+      const res = await axios.post(`${API_BASE}/api/appointments/book`, {
         doctor: selectedDoctorId,
         date,
         timeSlot,

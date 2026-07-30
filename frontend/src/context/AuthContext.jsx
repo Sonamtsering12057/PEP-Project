@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
+import { API_BASE } from '../config/api';
 
 const AuthContext = createContext();
 
@@ -17,7 +18,7 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          const res = await axios.get('http://localhost:5001/api/auth/me', {
+          const res = await axios.get(`${API_BASE}/api/auth/me`, {
             headers: {
               Authorization: `Bearer ${token}`
             }
@@ -35,7 +36,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const res = await axios.post('http://localhost:5001/api/auth/login', { email, password });
+      const res = await axios.post(`${API_BASE}/api/auth/login`, { email, password });
       localStorage.setItem('token', res.data.token);
       setUser(res.data);
       return { success: true, role: res.data.role };
@@ -46,10 +47,10 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (name, email, password, role) => {
     try {
-      const res = await axios.post('http://localhost:5001/api/auth/register', { name, email, password, role });
+      const res = await axios.post(`${API_BASE}/api/auth/register`, { name, email, password, role });
       localStorage.setItem('token', res.data.token);
       setUser(res.data);
-      return { success: true };
+      return { success: true, role: res.data.role };
     } catch (error) {
       return { success: false, message: error.response?.data?.message || 'Registration failed' };
     }
@@ -60,29 +61,9 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  // Axios Interceptor for future requests
-  axios.interceptors.request.use(
-    (config) => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    },
-    (error) => Promise.reject(error)
-  );
-
-  const value = {
-    user,
-    loading,
-    login,
-    register,
-    logout
-  };
-
   return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+      {children}
     </AuthContext.Provider>
   );
 };
