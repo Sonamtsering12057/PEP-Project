@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import AIChatbot from '../../components/AIChatbot';
 import LanguageSelector from '../../components/LanguageSelector';
+import Medical3DBackground from '../../components/Medical3DBackground';
 
 // ──────────────────────────────────────────────
 // Top Doctors Header Navbar (White Theme)
@@ -200,15 +201,18 @@ const Home = () => {
       <Navbar />
 
       {/* ── Hero Section (White Theme) ── */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 pt-24 pb-16 overflow-hidden bg-gradient-to-b from-blue-50/60 via-white to-white">
+      <section className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 pt-24 pb-16 overflow-hidden bg-gradient-to-b from-blue-50/90 via-white/80 to-white">
         
+        {/* 3D Background Canvas */}
+        <Medical3DBackground />
+
         {/* Soft Ambient Radial Lights */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-blue-400/10 rounded-full blur-[120px]"></div>
-          <div className="absolute top-1/3 left-1/4 w-[350px] h-[350px] bg-cyan-400/10 rounded-full blur-[100px]"></div>
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-blue-400/20 rounded-full blur-[120px]"></div>
+          <div className="absolute top-1/3 left-1/4 w-[350px] h-[350px] bg-cyan-400/20 rounded-full blur-[100px]"></div>
         </div>
 
-        <div className="relative z-10 max-w-5xl mx-auto">
+        <div className="relative z-10 max-w-5xl mx-auto bg-white/30 backdrop-blur-[2px] rounded-3xl p-6 sm:p-10 border border-white/40 shadow-xl">
           
           {/* Top Doctors Badge */}
           <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-extrabold uppercase tracking-widest px-4 py-2 rounded-full mb-8 shadow-sm">
