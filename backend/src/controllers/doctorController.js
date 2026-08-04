@@ -293,6 +293,19 @@ const getDoctorById = async (req, res) => {
   }
 };
 
+// GET /api/doctors/me/profile - Get logged-in doctor profile
+const getMyDoctorProfile = async (req, res) => {
+  try {
+    const doctor = await User.findById(req.user._id).select('-password');
+    if (!doctor || doctor.role !== 'Doctor') {
+      return res.status(404).json({ message: 'Doctor profile not found' });
+    }
+    res.json({ success: true, data: doctor });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 // PUT /api/doctors/me/profile - Update doctor's own profile
 const updateMyDoctorProfile = async (req, res) => {
   try {
@@ -397,6 +410,7 @@ module.exports = {
   seedDoctorsIfEmpty,
   getDoctors,
   getDoctorById,
+  getMyDoctorProfile,
   updateMyDoctorProfile,
   getAllDoctorsForAdmin,
   verifyDoctorByAdmin,

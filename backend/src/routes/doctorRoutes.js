@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   getDoctors,
   getDoctorById,
+  getMyDoctorProfile,
   updateMyDoctorProfile,
   getAllDoctorsForAdmin,
   verifyDoctorByAdmin,
@@ -15,7 +16,7 @@ router.get('/', getDoctors);
 router.get('/live-nearby-hospitals', getLiveNearbyHospitals);
 
 // Doctor routes
-router.get('/me/profile', protect, restrictTo('Doctor'), getDoctorById);
+router.get('/me/profile', protect, restrictTo('Doctor'), getMyDoctorProfile);
 router.put('/me/profile', protect, restrictTo('Doctor'), updateMyDoctorProfile);
 
 // Admin routes

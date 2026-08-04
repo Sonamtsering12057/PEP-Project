@@ -77,7 +77,7 @@ const ConsultationChatModal = ({ isOpen, onClose, appointment }) => {
     try {
       const res = await axios.post(`${API_BASE}/api/consultations/send`, {
         appointmentId: appointment._id,
-        text: messageText
+        message: messageText
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
@@ -138,7 +138,7 @@ const ConsultationChatModal = ({ isOpen, onClose, appointment }) => {
                     isMine ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white border border-gray-200 text-gray-900 rounded-bl-none'
                   }`}>
                     <p className="font-semibold text-[11px] opacity-80 mb-0.5">{msg.senderName || (isMine ? 'You' : 'Other')}</p>
-                    <p>{msg.text}</p>
+                    <p>{msg.message}</p>
                   </div>
                   <span className="text-[10px] text-gray-400 mt-1 px-1">
                     {new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
