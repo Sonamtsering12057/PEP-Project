@@ -20,7 +20,8 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.8.1",
     "socket.io": "^4.8.3",
-    "stripe": "^22.3.2"
+    "stripe": "^22.3.2",
+    "wellness-connect-root": "file:.."
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

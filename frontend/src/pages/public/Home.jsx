@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import AIChatbot from '../../components/AIChatbot';
 import LanguageSelector from '../../components/LanguageSelector';
-import Medical3DBackground from '../../components/Medical3DBackground';
 
 // ──────────────────────────────────────────────
 // Top Doctors Header Navbar (White Theme)
@@ -197,15 +196,12 @@ const Home = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 selection:bg-blue-500 selection:text-white">
+    <div className="min-h-screen bg-transparent text-gray-900 selection:bg-blue-500 selection:text-white">
       <Navbar />
 
       {/* ── Hero Section (White Theme) ── */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 pt-24 pb-16 overflow-hidden bg-gradient-to-b from-blue-50/90 via-white/80 to-white">
+      <section className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 pt-24 pb-16 overflow-hidden bg-gradient-to-b from-blue-50/90 via-white/80 to-transparent">
         
-        {/* 3D Background Canvas */}
-        <Medical3DBackground />
-
         {/* Soft Ambient Radial Lights */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-blue-400/20 rounded-full blur-[120px]"></div>

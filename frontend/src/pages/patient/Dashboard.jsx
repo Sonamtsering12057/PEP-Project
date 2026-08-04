@@ -4,6 +4,7 @@ import DiscoveryMap from '../../components/DiscoveryMap';
 import AppointmentModal from '../../components/AppointmentModal';
 import ConsultationChatModal from '../../components/ConsultationChatModal';
 import LanguageSelector from '../../components/LanguageSelector';
+import Medical3DBackground from '../../components/Medical3DBackground';
 import axios from 'axios';
 import { jsPDF } from 'jspdf';
 import { Link, useNavigate } from 'react-router-dom';
@@ -377,10 +378,11 @@ const PatientDashboard = () => {
   const [selectedDoctorForBooking, setSelectedDoctorForBooking] = useState(null);
 
   return (
-    <div className="min-h-screen bg-[#080b12] flex">
+    <div className="relative min-h-screen bg-[#080b12]/60 backdrop-blur-sm flex overflow-hidden">
+      <Medical3DBackground />
 
       {/* ── Sidebar ── */}
-      <aside className="w-64 flex-shrink-0 bg-[#0d1117] border-r border-white/8 flex flex-col min-h-screen">
+      <aside className="w-64 flex-shrink-0 bg-[#0d1117]/80 backdrop-blur-md border-r border-white/8 flex flex-col min-h-screen">
         <div className="p-6 border-b border-white/8">
           <Link to="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">

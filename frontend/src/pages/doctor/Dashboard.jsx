@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import ConsultationChatModal from '../../components/ConsultationChatModal';
 import PrescriptionModal from '../../components/PrescriptionModal';
+import Medical3DBackground from '../../components/Medical3DBackground';
 import { API_BASE } from '../../config/api';
 
 const DoctorDashboard = () => {
@@ -99,9 +100,10 @@ const DoctorDashboard = () => {
   const confirmed = appointments.filter(a => a.status === 'Confirmed');
 
   return (
-    <div className="min-h-screen bg-slate-50 flex text-gray-900">
-      {/* Sidebar */}
-      <aside className="w-64 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col min-h-screen">
+    <div className="relative min-h-screen bg-slate-50/70 backdrop-blur-sm flex text-gray-900 overflow-hidden">
+      <Medical3DBackground />
+      {/* ── Sidebar ── */}
+      <aside className="w-64 flex-shrink-0 bg-white/70 backdrop-blur-md border-r border-gray-200 flex flex-col min-h-screen">
         <div className="p-6 border-b border-gray-200">
           <Link to="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black text-white text-sm">W</div>
